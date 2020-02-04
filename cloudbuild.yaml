@@ -1,0 +1,24 @@
+# docker
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      source version.sh
+      docker build -t gcr.io/$PROJECT_ID/skynet:$COMMIT_SHA .
+      docker push gcr.io/$PROJECT_ID/skynet:$COMMIT_SHA
+#kubectl
+- name: 'gcr.io/cloud-builders/kubectl'
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      source version.sh
+      gcloud container clusters get-credentials --project="skynet-1984" --zone="us-central1-a" "virgo"
+      sed -e "s|__VERSION__|$COMMIT_SHA|g" deployments/web_template.yaml | tee deployments/web.yaml
+      cat deployments/web.yaml
+      kubectl apply -f - <deployments/web.yaml
+  env:
+    - 'CLOUDSDK_COMPUTE_ZONE=us-central1-a'
+    - 'CLOUDSDK_CONTAINER_CLUSTER=virgo'
