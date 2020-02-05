@@ -5,6 +5,7 @@ import abstractions.file_storage as file_storage
 import os
 from tcn import TCN
 import argparse
+import tensorflow as tf
 
 
 def get_args():
@@ -50,6 +51,24 @@ if not os.path.exists(ds_local_path):
 arr = np.load(ds_local_path)
 x = arr[:, :, 0:10]
 y = arr[:, 99, 10]
+
+resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
+tf.tpu.experimental.initialize_tpu_system(resolver)
+tpu_strategy = tf.distribute.experimental.TPUStrategy(resolver)
+
+# tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+#     FLAGS.tpu,
+#     zone=FLAGS.tpu_zone,
+#     project=FLAGS.gcp_project)
+#
+# config = tpu_config.RunConfig(
+#     cluster=tpu_cluster_resolver,
+#     model_dir=FLAGS.model_dir,
+#     save_checkpoints_steps=max(600, FLAGS.iterations_per_loop),
+#     tpu_config=tpu_config.TPUConfig(
+#         iterations_per_loop=FLAGS.iterations_per_loop,
+#         num_shards=FLAGS.num_cores,
+#         per_host_input_for_training=tpu_config.InputPipelineConfig.PER_HOST_V2))  # pylint: disable=line-too-long
 
 # set keras model
 i = Input(batch_shape=(None, 100, 10))
