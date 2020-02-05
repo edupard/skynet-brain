@@ -81,7 +81,7 @@ def save_model(model):
 args = get_args()
 x, y = load_dataset()
 
-resolver = tf.contrib.cluster_resolver.TPUClusterResolver(args.tpu)
+resolver = tf.distribute.cluster_resolver.TPUClusterResolver(args.tpu)
 tf.tpu.experimental.initialize_tpu_system(resolver)
 strategy = tf.distribute.experimental.TPUStrategy(resolver)
 with strategy.scope():
