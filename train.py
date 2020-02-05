@@ -80,12 +80,12 @@ def save_model(model):
 
 args = get_args()
 x, y = load_dataset()
-model = build_model()
 
-tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(args.tpu)
-strategy = tf.contrib.tpu.TPUDistributionStrategy(tpu_cluster_resolver)
-model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
-
-model.compile(optimizer='adam', loss='mse')
-model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
-save_model(model)
+resolver = tf.contrib.cluster_resolver.TPUClusterResolver(args.tpu)
+tf.tpu.experimental.initialize_tpu_system(resolver)
+strategy = tf.distribute.experimental.TPUStrategy(resolver)
+with strategy.scope():
+    model = build_model()
+    model.compile(optimizer='adam', loss='mse')
+    model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
+    save_model(model)
