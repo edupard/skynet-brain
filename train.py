@@ -36,56 +36,56 @@ def get_args():
                         type=int,
                         default=42,
                         help='random seed')
-    args = parser.parse_args()
+    parser.add_argument(
+        '--tpu',
+        default=None,
+        help='The name or GRPC URL of the TPU node.  Leave it as `None` when training on AI Platform.')
+
+    args, _ = parser.parse_known_args()
     return args
 
-args = get_args()
 
-ds_remote_path = f"batches/{args.model_idx}.npy"
-ds_local_path = f"input/ds_{args.model_idx}.npy"
+def load_dataset():
+    ds_remote_path = f"batches/{args.model_idx}.npy"
+    ds_local_path = f"input/ds_{args.model_idx}.npy"
 
-if not os.path.exists(ds_local_path):
-    file_storage.get_file(ds_remote_path, ds_local_path)
+    if not os.path.exists(ds_local_path):
+        file_storage.get_file(ds_remote_path, ds_local_path)
 
-#load data
-arr = np.load(ds_local_path)
-x = arr[:, :, 0:10]
-y = arr[:, 99, 10]
+    # load data
+    arr = np.load(ds_local_path)
+    x = arr[:, :, 0:10]
+    y = arr[:, 99, 10]
+    return x, y
 
-resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
-tf.tpu.experimental.initialize_tpu_system(resolver)
-tpu_strategy = tf.distribute.experimental.TPUStrategy(resolver)
 
-# tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-#     FLAGS.tpu,
-#     zone=FLAGS.tpu_zone,
-#     project=FLAGS.gcp_project)
-#
-# config = tpu_config.RunConfig(
-#     cluster=tpu_cluster_resolver,
-#     model_dir=FLAGS.model_dir,
-#     save_checkpoints_steps=max(600, FLAGS.iterations_per_loop),
-#     tpu_config=tpu_config.TPUConfig(
-#         iterations_per_loop=FLAGS.iterations_per_loop,
-#         num_shards=FLAGS.num_cores,
-#         per_host_input_for_training=tpu_config.InputPipelineConfig.PER_HOST_V2))  # pylint: disable=line-too-long
+def build_model():
+    input = Input(batch_shape=(None, 100, 10))
 
-with tpu_strategy.scope():
-    # set keras model
-    i = Input(batch_shape=(None, 100, 10))
+    output = TCN(return_sequences=False, dropout_rate=args.dropout_rate, dilations=(1, 2, 4, 8, 16, 32, 64))(
+        input)  # The TCN layers are here.
+    output = Dense(1)(output)
 
-    o = TCN(return_sequences=False, dropout_rate=args.dropout_rate, dilations=(1, 2, 4, 8, 16, 32, 64))(i)  # The TCN layers are here.
-    o = Dense(1)(o)
+    model = Model(inputs=[input], outputs=[output])
+    return model
 
-    m = Model(inputs=[i], outputs=[o])
-    m.compile(optimizer='adam', loss='mse')
 
-    # train
-    m.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
-
-    # save model
+def save_model(model):
     local_model_path = f"output/{args.model_idx}_{args.epochs}.h5"
     file_storage.create_dir_if_absent(local_model_path)
     remote_model_path = f"models/{args.model_idx}_{args.epochs}.h5"
-    m.save(local_model_path, save_format='h5')
-file_storage.put_file(local_model_path, remote_model_path)
+    model.save(local_model_path, save_format='h5')
+    file_storage.put_file(local_model_path, remote_model_path)
+
+
+args = get_args()
+x, y = load_dataset()
+model = build_model()
+
+tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(args.tpu)
+strategy = tf.contrib.tpu.TPUDistributionStrategy(tpu_cluster_resolver)
+model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
+
+model.compile(optimizer='adam', loss='mse')
+model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
+save_model(model)
