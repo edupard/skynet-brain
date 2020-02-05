@@ -70,21 +70,22 @@ tpu_strategy = tf.distribute.experimental.TPUStrategy(resolver)
 #         num_shards=FLAGS.num_cores,
 #         per_host_input_for_training=tpu_config.InputPipelineConfig.PER_HOST_V2))  # pylint: disable=line-too-long
 
-# set keras model
-i = Input(batch_shape=(None, 100, 10))
+with tpu_strategy.scope():
+    # set keras model
+    i = Input(batch_shape=(None, 100, 10))
 
-o = TCN(return_sequences=False, dropout_rate=args.dropout_rate, dilations=(1, 2, 4, 8, 16, 32, 64))(i)  # The TCN layers are here.
-o = Dense(1)(o)
+    o = TCN(return_sequences=False, dropout_rate=args.dropout_rate, dilations=(1, 2, 4, 8, 16, 32, 64))(i)  # The TCN layers are here.
+    o = Dense(1)(o)
 
-m = Model(inputs=[i], outputs=[o])
-m.compile(optimizer='adam', loss='mse')
+    m = Model(inputs=[i], outputs=[o])
+    m.compile(optimizer='adam', loss='mse')
 
-# train
-m.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
+    # train
+    m.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
 
-# save model
-local_model_path = f"output/{args.model_idx}_{args.epochs}.h5"
-file_storage.create_dir_if_absent(local_model_path)
-remote_model_path = f"models/{args.model_idx}_{args.epochs}.h5"
-m.save(local_model_path, save_format='h5')
+    # save model
+    local_model_path = f"output/{args.model_idx}_{args.epochs}.h5"
+    file_storage.create_dir_if_absent(local_model_path)
+    remote_model_path = f"models/{args.model_idx}_{args.epochs}.h5"
+    m.save(local_model_path, save_format='h5')
 file_storage.put_file(local_model_path, remote_model_path)
