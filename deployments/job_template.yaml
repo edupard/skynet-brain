@@ -8,6 +8,10 @@ spec:
       annotations:
         tf-version.cloud-tpus.google.com: "2.1"
     spec:
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: hinton-svc-key
       containers:
       - name: skynet-nn
         image: gcr.io/skynet-1984/nn:__VERSION__
@@ -24,5 +28,5 @@ spec:
             value: /etc/secret-volume/key
         resources:
           limits:
-            cloud-tpus.google.com/preemptible-v2: 8
+            cloud-tpus.google.com/v3: 8
       restartPolicy: Never

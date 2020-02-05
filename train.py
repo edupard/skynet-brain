@@ -82,7 +82,7 @@ args = get_args()
 x, y = load_dataset()
 
 resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
-# resolver = tf.distribute.cluster_resolver.TPUClusterResolver(args.tpu)
+tf.config.experimental_connect_to_cluster(resolver)
 tf.tpu.experimental.initialize_tpu_system(resolver)
 strategy = tf.distribute.experimental.TPUStrategy(resolver)
 with strategy.scope():
