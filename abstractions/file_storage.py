@@ -4,6 +4,11 @@ import os
 _PROJECT_NAME = 'skynet-1984'
 _BUCKET_NAME = f'{_PROJECT_NAME}-data'
 
+def create_dir_if_absent(local_file_name):
+    dir = os.path.dirname(local_file_name)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
 def put_file(local_file_path, remote_file_name):
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(_BUCKET_NAME)
@@ -11,9 +16,7 @@ def put_file(local_file_path, remote_file_name):
     blob.upload_from_filename(local_file_path)
 
 def get_file(remote_file_name, local_file_name):
-    dir = os.path.dirname(local_file_name)
-    if not os.path.exists(dir):
-        os.makedirs(dir)
+    create_dir_if_absent(local_file_name)
     storage_client = storage.Client()
     bucket = storage_client.get_bucket(_BUCKET_NAME)
     blob = bucket.get_blob(remote_file_name)

@@ -64,7 +64,8 @@ m.compile(optimizer='adam', loss='mse')
 m.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
 
 # save model
-checkpoint_path = f"output/{args.model_idx}_{args.epochs}.h5"
-remote_checkpoint_path = f"models/{args.model_idx}_{args.epochs}.h5"
-m.save(checkpoint_path, save_format='h5')
-file_storage.put_file(checkpoint_path, remote_checkpoint_path)
+local_model_path = f"output/{args.model_idx}_{args.epochs}.h5"
+file_storage.create_dir_if_absent(local_model_path)
+remote_model_path = f"models/{args.model_idx}_{args.epochs}.h5"
+m.save(local_model_path, save_format='h5')
+file_storage.put_file(local_model_path, remote_model_path)
