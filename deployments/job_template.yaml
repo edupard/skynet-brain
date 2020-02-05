@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nn
+spec:
+  template:
+    metadata:
+      annotations:
+        tf-version.cloud-tpus.google.com: "2.1"
+    spec:
+      containers:
+      - name: skynet-nn
+        image: gcr.io/skynet-1984/nn:__VERSION__
+        command:
+        - python
+        - train.py
+        - --model-idx=1
+        volumeMounts:
+          - name: secret-volume
+            readOnly: true
+            mountPath: "/etc/secret-volume"
+        env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/secret-volume/key
+        resources:
+          limits:
+            cloud-tpus.google.com/preemptible-v2: 8
+      restartPolicy: Never
