@@ -36,10 +36,10 @@ def get_args():
                         type=int,
                         default=42,
                         help='random seed')
-    parser.add_argument(
-        '--tpu',
-        default=None,
-        help='The name or GRPC URL of the TPU node.  Leave it as `None` when training on AI Platform.')
+    # parser.add_argument(
+    #     '--tpu',
+    #     default=None,
+    #     help='The name or GRPC URL of the TPU node.  Leave it as `None` when training on AI Platform.')
 
     args, _ = parser.parse_known_args()
     return args
@@ -81,7 +81,8 @@ def save_model(model):
 args = get_args()
 x, y = load_dataset()
 
-resolver = tf.distribute.cluster_resolver.TPUClusterResolver(args.tpu)
+resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
+# resolver = tf.distribute.cluster_resolver.TPUClusterResolver(args.tpu)
 tf.tpu.experimental.initialize_tpu_system(resolver)
 strategy = tf.distribute.experimental.TPUStrategy(resolver)
 with strategy.scope():
