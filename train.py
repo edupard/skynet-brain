@@ -24,7 +24,7 @@ def get_args():
                         help='path to save the model')
     parser.add_argument('--batch-size',
                         type=int,
-                        default=100,
+                        default=32,
                         help='input batch size for training')
     parser.add_argument('--test-split',
                         type=float,
