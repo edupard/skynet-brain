@@ -8,6 +8,7 @@ import argparse
 import tensorflow as tf
 import timeit
 
+
 def get_args():
     def boolean_string(s: str):
         s = s.lower()
@@ -42,10 +43,10 @@ def get_args():
                         type=int,
                         default=42,
                         help='random seed')
-    parser.add_argument('--use-tpu',
-                        default = False,
-                        type=boolean_string,
-                        help = 'use tpu')
+    parser.add_argument('--acceleration',
+                        default='',
+                        type=str,
+                        help='cpu|gpu|tpu')
     args, _ = parser.parse_known_args()
     return args
 
@@ -61,13 +62,13 @@ def load_data(args):
     arr = np.load(ds_local_path)
     x = arr[:, :, 0:10]
     y = arr[:, 99, 10]
-    return x, y
+    # return x, y
 
-    # total_samples = x.shape[0]
-    # num_batches = total_samples // args.batch_size
-    # num_samples = num_batches * args.batch_size
-    #
-    # return x[0:num_samples, :, :], y[0: num_samples]
+    total_samples = x.shape[0]
+    num_batches = total_samples // args.batch_size
+    num_samples = num_batches * args.batch_size
+
+    return x[0:num_samples, :, :], y[0: num_samples]
 
 
 def build_model():
@@ -90,19 +91,21 @@ def save_model(model):
 
 
 def get_distibution_strategy(args):
-    if args.use_tpu:
+    if args.acceleration == 'tpu':
         resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
         tf.config.experimental_connect_to_cluster(resolver)
         tf.tpu.experimental.initialize_tpu_system(resolver)
         return tf.distribute.experimental.TPUStrategy(resolver)
+    elif args.acceleration == 'gpu':
+        tf.distribute.MirroredStrategy()
     else:
         return tf.distribute.OneDeviceStrategy(device="/cpu:0")
 
 
 args = get_args()
 x, y = load_data(args)
-dataset = tf.data.Dataset.from_tensor_slices((x, y))
-dataset = dataset.batch(args.batch_size, drop_remainder=True)
+# dataset = tf.data.Dataset.from_tensor_slices((x, y))
+# dataset = dataset.batch(args.batch_size, drop_remainder=True)
 strategy = get_distibution_strategy(args)
 print(f"Num replicas: {strategy.num_replicas_in_sync}")
 
@@ -110,8 +113,6 @@ with strategy.scope():
     model = build_model()
     # print(model.summary())
     model.compile(optimizer='adam', loss='mse')
-    start_time = timeit.default_timer()
-    model.fit(dataset, epochs=args.epochs)
-    # model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size)
-    print(timeit.default_timer() - start_time)
+    # model.fit(dataset, epochs=args.epochs)
+    model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size)
     save_model(model)

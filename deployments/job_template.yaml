@@ -20,7 +20,7 @@ spec:
         - train.py
         - --model-idx=1
         - --batch-size=32
-        - --use-tpu=True
+        - --acceleration=tpu
         volumeMounts:
           - name: secret-volume
             readOnly: true

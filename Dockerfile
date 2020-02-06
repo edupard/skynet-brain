@@ -1,5 +1,10 @@
 # https://github.com/GoogleCloudPlatform/python-runtime
-FROM gcr.io/google-appengine/python
+# FROM gcr.io/google-appengine/python
+
+FROM nvidia/cuda:10.0-runtime-ubuntu18.04
+RUN apt-get update && apt-get install \
+  -y --no-install-recommends python3 python3-pip \
+  && pip3 install virtualenv
 
 RUN virtualenv -p python3.6 /env
 
