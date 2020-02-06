@@ -19,6 +19,7 @@ spec:
         - python
         - train.py
         - --model-idx=1
+        - --use-tpu=true
         volumeMounts:
           - name: secret-volume
             readOnly: true

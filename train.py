@@ -26,7 +26,7 @@ def get_args():
                         help='split size for training / testing dataset')
     parser.add_argument('--epochs',
                         type=int,
-                        default=2,
+                        default=10,
                         help='number of epochs to train')
     parser.add_argument('--dropout-rate',
                         type=float,
@@ -36,11 +36,10 @@ def get_args():
                         type=int,
                         default=42,
                         help='random seed')
-    # parser.add_argument(
-    #     '--tpu',
-    #     default=None,
-    #     help='The name or GRPC URL of the TPU node.  Leave it as `None` when training on AI Platform.')
-
+    parser.add_argument('--use-tpu',
+                        type=bool,
+                        default=False,
+                        help='use tpu')
     args, _ = parser.parse_known_args()
     return args
 
@@ -56,6 +55,7 @@ def load_dataset():
     arr = np.load(ds_local_path)
     x = arr[:, :, 0:10]
     y = arr[:, 99, 10]
+
     return x, y
 
 
@@ -78,15 +78,23 @@ def save_model(model):
     file_storage.put_file(local_model_path, remote_model_path)
 
 
+def get_distibution_strategy(args):
+    if args.use_tpu:
+        resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
+        tf.config.experimental_connect_to_cluster(resolver)
+        tf.tpu.experimental.initialize_tpu_system(resolver)
+        return tf.distribute.experimental.TPUStrategy(resolver)
+    else:
+        return tf.distribute.OneDeviceStrategy(device="/cpu:0")
+
+
 args = get_args()
 x, y = load_dataset()
+strategy = get_distibution_strategy(args)
 
-resolver = tf.distribute.cluster_resolver.TPUClusterResolver()
-tf.config.experimental_connect_to_cluster(resolver)
-tf.tpu.experimental.initialize_tpu_system(resolver)
-strategy = tf.distribute.experimental.TPUStrategy(resolver)
 with strategy.scope():
     model = build_model()
+    print(model.summary())
     model.compile(optimizer='adam', loss='mse')
     model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
     save_model(model)
