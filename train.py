@@ -6,9 +6,15 @@ import os
 from tcn import TCN
 import argparse
 import tensorflow as tf
-
+import timeit
 
 def get_args():
+    def boolean_string(s: str):
+        s = s.lower()
+        if s not in {'false', 'true', 'y', 'n'}:
+            raise ValueError('Not a valid boolean string')
+        return s == 'true' or s == 'y'
+
     parser = argparse.ArgumentParser(description='skynet brain nn')
     parser.add_argument('--model-idx',
                         type=int,
@@ -37,14 +43,14 @@ def get_args():
                         default=42,
                         help='random seed')
     parser.add_argument('--use-tpu',
-                        type=bool,
-                        default=False,
-                        help='use tpu')
+                        default = False,
+                        type=boolean_string,
+                        help = 'use tpu')
     args, _ = parser.parse_known_args()
     return args
 
 
-def load_dataset():
+def load_data():
     ds_remote_path = f"batches/{args.model_idx}.npy"
     ds_local_path = f"input/ds_{args.model_idx}.npy"
 
@@ -89,12 +95,17 @@ def get_distibution_strategy(args):
 
 
 args = get_args()
-x, y = load_dataset()
+x, y = load_data()
+dataset = tf.data.Dataset.from_tensor_slices((x, y))
+dataset = dataset.batch(args.batch_size, drop_remainder=True)
 strategy = get_distibution_strategy(args)
+print(f"Num replicas: {strategy.num_replicas_in_sync}")
 
 with strategy.scope():
     model = build_model()
     print(model.summary())
     model.compile(optimizer='adam', loss='mse')
-    model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size, validation_split=args.test_split)
+    start_time = timeit.default_timer()
+    model.fit(dataset, epochs=args.epochs)
+    print(timeit.default_timer() - start_time)
     save_model(model)
