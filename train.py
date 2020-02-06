@@ -61,12 +61,13 @@ def load_data(args):
     arr = np.load(ds_local_path)
     x = arr[:, :, 0:10]
     y = arr[:, 99, 10]
+    return x, y
 
-    total_samples = x.shape[0]
-    num_batches = total_samples // args.batch_size
-    num_samples = num_batches * args.batch_size
-
-    return x[0:num_samples, :, :], y[0: num_samples]
+    # total_samples = x.shape[0]
+    # num_batches = total_samples // args.batch_size
+    # num_samples = num_batches * args.batch_size
+    #
+    # return x[0:num_samples, :, :], y[0: num_samples]
 
 
 def build_model():
@@ -100,8 +101,8 @@ def get_distibution_strategy(args):
 
 args = get_args()
 x, y = load_data(args)
-# dataset = tf.data.Dataset.from_tensor_slices((x, y))
-# dataset = dataset.batch(args.batch_size, drop_remainder=True)
+dataset = tf.data.Dataset.from_tensor_slices((x, y))
+dataset = dataset.batch(args.batch_size, drop_remainder=True)
 strategy = get_distibution_strategy(args)
 print(f"Num replicas: {strategy.num_replicas_in_sync}")
 
@@ -110,7 +111,7 @@ with strategy.scope():
     # print(model.summary())
     model.compile(optimizer='adam', loss='mse')
     start_time = timeit.default_timer()
-    # model.fit(dataset, epochs=args.epochs)
-    model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size)
+    model.fit(dataset, epochs=args.epochs)
+    # model.fit(x, y, epochs=args.epochs, batch_size=args.batch_size)
     print(timeit.default_timer() - start_time)
     save_model(model)

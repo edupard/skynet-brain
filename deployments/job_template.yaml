@@ -19,7 +19,7 @@ spec:
         - python
         - train.py
         - --model-idx=1
-        - --batch-size=128
+        - --batch-size=32
         - --use-tpu=True
         volumeMounts:
           - name: secret-volume
