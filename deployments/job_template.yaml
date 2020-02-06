@@ -19,6 +19,7 @@ spec:
         - python
         - train.py
         - --model-idx=1
+        - --batch-size=128
         - --use-tpu=True
         volumeMounts:
           - name: secret-volume
@@ -29,5 +30,5 @@ spec:
             value: /etc/secret-volume/key
         resources:
           limits:
-            cloud-tpus.google.com/v3: 8
+            cloud-tpus.google.com/preemptible-v3: 8
       restartPolicy: Never
